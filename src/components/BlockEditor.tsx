@@ -10,9 +10,9 @@ interface BlockEditorProps {
 
 const BlockEditor: React.FC<BlockEditorProps> = ({ pageId }) => {
   const { getPageBlocks, addBlock, updateBlock, deleteBlock } = useApp();
-  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashMenuPosition, setSlashMenuPosition] = useState({ top: 0, left: 0 });
+  const [slashMenuBlockId, setSlashMenuBlockId] = useState<string | null>(null);
   const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -30,23 +30,16 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ pageId }) => {
 
   const handleBlockContentChange = (blockId: string, content: string) => {
     updateBlock(blockId, { content });
-
-    // Handle slash command detection
-    if (content.endsWith('/')) {
-      const blockElement = document.getElementById(`block-${blockId}`);
-      if (blockElement) {
-        const rect = blockElement.getBoundingClientRect();
-        setSlashMenuPosition({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX
-        });
-        setShowSlashMenu(true);
-        setFocusedBlockId(blockId);
-        setSelectedSlashIndex(0);
-      }
-    } else {
+    if (!content.endsWith('/')) {
       setShowSlashMenu(false);
     }
+  };
+
+  const handleShowSlashMenu = ({ top, left, blockId }: { top: number, left: number, blockId: string }) => {
+    setSlashMenuPosition({ top, left });
+    setSlashMenuBlockId(blockId);
+    setShowSlashMenu(true);
+    setSelectedSlashIndex(0);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, blockId: string, parentBlockId?: string) => {
@@ -62,9 +55,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ pageId }) => {
           e.preventDefault();
           const newBlock = addBlock(pageId, blockId, parentBlockId);
           setTimeout(() => {
-            const newBlockElement = document.getElementById(`block-${newBlock.id}`);
-            const input = newBlockElement?.querySelector('input, textarea, [contenteditable]') as HTMLElement;
-            input?.focus();
+            document.getElementById(`editable-${newBlock.id}`)?.focus();
           }, 0);
         }
         break;
@@ -81,9 +72,7 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ pageId }) => {
             const prevBlock = allBlocks[blockIndex - 1];
             deleteBlock(blockId);
             setTimeout(() => {
-              const prevBlockElement = document.getElementById(`block-${prevBlock.id}`);
-              const input = prevBlockElement?.querySelector('input, textarea, [contenteditable]') as HTMLElement;
-              input?.focus();
+              document.getElementById(`editable-${prevBlock.id}`)?.focus();
             }, 0);
           }
         }
@@ -107,50 +96,45 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ pageId }) => {
         if (showSlashMenu) {
           e.preventDefault();
           setShowSlashMenu(false);
-          // Remove the trailing slash
-          updateBlock(blockId, { content: block.content.slice(0, -1) });
         }
         break;
     }
   };
 
   const handleSlashMenuSelect = (blockType: BlockType) => {
-    if (focusedBlockId) {
-      const block = blocks.find(b => b.id === focusedBlockId);
+    if (slashMenuBlockId) {
+      const block = blocks.find(b => b.id === slashMenuBlockId);
       if (block) {
         const updates: Partial<Block> = {
           type: blockType.type,
           content: blockType.type === 'divider' ? '' : block.content.slice(0, -1)
         };
 
-        // Add type-specific defaults
-        if (blockType.type === 'todo') {
-          updates.checked = false;
-        } else if (blockType.type === 'toggle') {
+        if (blockType.type === 'todo') updates.checked = false;
+        else if (blockType.type === 'toggle') {
           updates.isExpanded = false;
           updates.children = [];
-        } else if (blockType.type === 'code') {
-          updates.language = 'javascript';
-        }
+        } else if (blockType.type === 'code') updates.language = 'javascript';
 
-        updateBlock(focusedBlockId, updates);
+        updateBlock(slashMenuBlockId, updates);
+        setTimeout(() => {
+          document.getElementById(`editable-${slashMenuBlockId}`)?.focus();
+        }, 0);
       }
     }
     setShowSlashMenu(false);
   };
 
-  const handleClickOutside = (e: MouseEvent) => {
-    if (showSlashMenu && !editorRef.current?.contains(e.target as Node)) {
-      setShowSlashMenu(false);
-    }
-  };
-
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showSlashMenu && !editorRef.current?.contains(e.target as Node)) {
+        setShowSlashMenu(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSlashMenu]);
 
-  // Ensure there's always at least one block
   useEffect(() => {
     if (blocks.length === 0) {
       addBlock(pageId);
@@ -168,6 +152,8 @@ const BlockEditor: React.FC<BlockEditorProps> = ({ pageId }) => {
             onKeyDown={handleKeyDown}
             onToggleCheck={(checked) => updateBlock(block.id, { checked })}
             onUpdateBlock={(updates) => updateBlock(block.id, updates)}
+            onShowSlashMenu={handleShowSlashMenu}
+            onHideSlashMenu={() => setShowSlashMenu(false)}
           />
         ))}
       </div>

@@ -13,6 +13,8 @@ module.exports = {
         'quantum-gray-light': '#DDDDDF',
         'quantum-gray-medium': '#BBBBC0',
         'quantum-gray-dark': '#AFAFB5',
+        'quantum-ai-bg': '#383738',
+        'quantum-ai-text': '#848484',
       },
       fontFamily: {
         inter: ['Inter', 'sans-serif'],

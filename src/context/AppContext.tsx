@@ -23,7 +23,7 @@ interface AppContextType {
   toggleSidebar: () => void;
   getPageBlocks: (pageId: string) => Block[];
   getChildBlocks: (parentBlockId: string) => Block[];
-  addBlock: (pageId: string, afterBlockId?: string, parentBlockId?: string) => Block;
+  addBlock: (pageId: string, afterBlockId?: string, parentBlockId?: string, content?: string) => Block;
   updateBlock: (blockId: string, updates: Partial<Block>) => void;
   deleteBlock: (blockId: string) => void;
   toggleBlockExpansion: (blockId: string) => void;
@@ -58,7 +58,7 @@ const initialRoadmapTasks: RoadmapTask[] = [];
 const initialCalendarEvents: CalendarEvent[] = [];
 const initialBlocks: Block[] = [
     { id: 'block-1', type: 'heading', content: 'Welcome to your enhanced workspace!', pageId: 'page-1' },
-    { id: 'block-2', type: 'text', content: 'This block editor now supports rich content types. Try typing "/" to see all available block types.', pageId: 'page-1' },
+    { id: 'block-2', type: 'text', content: 'This block editor now supports rich content types. Try typing "/" to see all available block types.\nYou can also use the AI prompt bar at the bottom to generate content!', pageId: 'page-1' },
     { id: 'block-pa-1', type: 'heading', content: 'Project A Kick-off', pageId: 'page-project-a' },
 ];
 
@@ -127,11 +127,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const selectPage = useCallback((pageId: string) => { setSelectedPageId(pageId); setSelectedTemplateId(null); }, []);
   const selectTemplate = useCallback((templateId: string) => { setSelectedTemplateId(templateId); setSelectedPageId(null); }, []);
   const togglePageExpansion = useCallback((pageId: string) => setPages(prev => prev.map(p => p.id === pageId ? { ...p, isExpanded: !p.isExpanded } : p)), []);
-  const getPageBlocks = useCallback((pageId: string): Block[] => blocks.filter(b => b.pageId === pageId && !b.parentBlockId), [blocks]);
-  const getChildBlocks = useCallback((parentBlockId: string): Block[] => blocks.filter(b => b.parentBlockId === parentBlockId), [blocks]);
+  const getPageBlocks = useCallback((pageId: string): Block[] => blocks.filter(b => b.pageId === pageId && !b.parentBlockId).sort((a, b) => blocks.indexOf(a) - blocks.indexOf(b)), [blocks]);
+  const getChildBlocks = useCallback((parentBlockId: string): Block[] => blocks.filter(b => b.parentBlockId === parentBlockId).sort((a, b) => blocks.indexOf(a) - blocks.indexOf(b)), [blocks]);
 
-  const addBlock = useCallback((pageId: string, afterBlockId?: string, parentBlockId?: string): Block => {
-    const newBlock: Block = { id: generateUniqueId('block'), type: 'text', content: '', pageId, ...(parentBlockId && { parentBlockId }) };
+  const addBlock = useCallback((pageId: string, afterBlockId?: string, parentBlockId?: string, content: string = ''): Block => {
+    const newBlock: Block = { id: generateUniqueId('block'), type: 'text', content, pageId, ...(parentBlockId && { parentBlockId }) };
     setBlocks(prev => {
       let newBlocks = [...prev];
       if (afterBlockId) {

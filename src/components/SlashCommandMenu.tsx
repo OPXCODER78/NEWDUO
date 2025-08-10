@@ -17,7 +17,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 }) => {
   return (
     <div
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[250px] max-h-80 overflow-y-auto"
+      className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[250px] max-h-80 overflow-y-auto"
       style={{
         top: position.top,
         left: position.left,
